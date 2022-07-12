@@ -3,7 +3,7 @@
 ## Overview
 
 Python module to perform the Bayesian Inversion of a forward model
-$$ y = Kx $$
+$$y = Kx$$
 with $y$ as the measurement vector, $K$ as the forward model matrix, and $x$ as the state vector.
 
 ## Installation
