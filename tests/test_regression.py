@@ -39,18 +39,22 @@ def test_regression():
 
     # Simple Least Squares
     reg = Regression(y, K)
-    x_reg = reg.fit()
+    x_est, res, rank, s = reg.fit()
+    inv_params = reg.compute_l_curve()
 
     # Bayesian diagonal covariance
     reg = Regression(y, K, x_prior, np.diag(x_covariance), y_covariance)
-    x_reg = reg.fit()
+    x_est, res, rank, s = reg.fit()
+    inv_params = reg.compute_l_curve()
 
     # Bayesian with full covariance
     reg = Regression(y, K, x_prior, x_covariance, y_covariance)
-    x_reg = reg.fit()
+    x_est, res, rank, s = reg.fit()
+    inv_params = reg.compute_l_curve()
 
     # Test Cholesky decomposition
+    x_covariance_inv_sqrt = reg.model.x_covariance_inv_sqrt
     assert np.allclose(
-        reg.x_covariance_inv_sqrt @ reg.x_covariance_inv_sqrt.T @ x_covariance,
+        x_covariance_inv_sqrt @ x_covariance_inv_sqrt.T @ x_covariance,
         np.eye(n),
     )
