@@ -273,13 +273,13 @@ class Regression:
             # Update inversion parameters
             self.y_reg, self.K_reg = self.model.get_reg_params(alpha)
             x_est, res, rank, s = self.fit(cond=cond)
-            inversion_params["x_est"] = x_est
-            inversion_params["res"] = res
-            inversion_params["rank"] = rank
-            inversion_params["s"] = s
+            inversion_params["x_est"].append(x_est)
+            inversion_params["res"].append(res)
+            inversion_params["rank"].append(rank)
+            inversion_params["s"].append(s)
             loss_regularization, loss_forward_model = self.model.get_loss_terms(
                 x=self.x_est, alpha=alpha
             )
-            inversion_params["loss_regularization"] = loss_regularization
-            inversion_params["loss_forward_model"] = loss_forward_model
+            inversion_params["loss_regularization"].append(loss_regularization)
+            inversion_params["loss_forward_model"].append(loss_forward_model)
         return inversion_params
