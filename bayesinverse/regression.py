@@ -18,7 +18,7 @@ class LeastSquares:
         return self.y_reg, self.K_reg
 
     def get_loss_terms(self, x, alpha):
-        loss_regularization = alpha * np.sum(x**2)
+        loss_regularization = np.sum(x**2)
         loss_least_squares = np.sum((self.y - self.K @ x) ** 2)
         return loss_regularization, loss_least_squares
 
@@ -54,7 +54,7 @@ class BayInv:
         return self.y_reg, self.K_reg
 
     def get_loss_terms(self, x, alpha):
-        loss_regularization = alpha * (
+        loss_regularization = (
             (self.x_prior - x) @ np.diag(1 / self.x_covariance) @ (self.x_prior - x)
         )
         loss_least_squares = np.sum((self.y - self.K @ x) ** 2)
@@ -96,7 +96,7 @@ class BayInvCov:
         return self.y_reg, self.K_reg
 
     def get_loss_terms(self, x, alpha):
-        loss_regularization = alpha * (
+        loss_regularization = (
             (self.x_prior - x)
             @ self.x_covariance_inv_sqrt
             @ self.x_covariance_inv_sqrt.T
