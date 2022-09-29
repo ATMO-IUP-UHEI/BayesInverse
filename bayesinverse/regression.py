@@ -17,7 +17,7 @@ class LeastSquares:
         self.K_reg = np.concatenate((self.K, np.diag(reg_vector)))
         return self.y_reg, self.K_reg
 
-    def get_loss_terms(self, x, alpha):
+    def get_loss_terms(self, x):
         loss_regularization = np.sum(x**2)
         loss_least_squares = np.sum((self.y - self.K @ x) ** 2)
         return loss_regularization, loss_least_squares
@@ -53,7 +53,7 @@ class BayInv:
         )
         return self.y_reg, self.K_reg
 
-    def get_loss_terms(self, x, alpha):
+    def get_loss_terms(self, x):
         loss_regularization = (
             (self.x_prior - x) @ np.diag(1 / self.x_covariance) @ (self.x_prior - x)
         )
@@ -95,7 +95,7 @@ class BayInvCov:
         )
         return self.y_reg, self.K_reg
 
-    def get_loss_terms(self, x, alpha):
+    def get_loss_terms(self, x):
         loss_regularization = (
             (self.x_prior - x)
             @ self.x_covariance_inv_sqrt
@@ -170,6 +170,14 @@ class Regression:
         self.x_prior = np.array(x_prior)
         self.x_covariance = np.array(x_covariance)
         self.y_covariance = np.array(y_covariance)
+
+        self.x_covariance_inv = None
+        self.y_covariance_inv = None
+        self.x_posterior_covariance_inv = None
+        self.x_posterior_covariance = None
+        self.x_posterior_correlation = None
+        self.gain = None
+        self.averaging_kernel = None
 
         # Choose model
         # Standard Least-Squares
@@ -259,6 +267,13 @@ class Regression:
         ...     inv_params["loss_forward_model"],
         ... )
 
+        To get the gain, averaging kernel, and posterior covariance matrix (only works
+        for Bayesian inversion):
+
+        >>> posterior_covariance = regression.get_posterior_covariance()
+        >>> gain = regression.get_gain()
+        >>> averaging_kernel = regression.get_averaging_kernel()
+
         """
         inversion_params = dict(
             alpha=alpha_list,
@@ -278,8 +293,49 @@ class Regression:
             inversion_params["rank"].append(rank)
             inversion_params["s"].append(s)
             loss_regularization, loss_forward_model = self.model.get_loss_terms(
-                x=self.x_est, alpha=alpha
+                x=self.x_est
             )
             inversion_params["loss_regularization"].append(loss_regularization)
             inversion_params["loss_forward_model"].append(loss_forward_model)
         return inversion_params
+
+    def get_x_covariance_inv(self):
+        if self.x_covariance_inv is None:
+            # Check if prior covariance with off-diagonal elements
+            if len(self.x_covariance.shape) == 2:
+                self.x_covariance_inv = (
+                    self.model.x_covariance_inv_sqrt.T
+                    @ self.model.x_covariance_inv_sqrt
+                )
+            else:
+                self.x_covariance_inv = np.diag(1 / self.x_covariance)
+        return self.x_covariance_inv
+
+    def get_y_covariance_inv(self):
+        if self.y_covariance_inv is None:
+            self.y_covariance_inv = np.diag(1 / self.y_covariance)
+        return self.y_covariance_inv
+
+    def get_posterior_covariance_inverse(self):
+        if self.x_posterior_covariance_inv is None:
+            self.x_posterior_covariance_inv = (
+                self.K.T @ self.get_y_covariance_inv() @ self.K + self.get_x_covariance_inv()
+            )
+        return self.x_posterior_covariance_inv
+
+    def get_posterior_covariance(self):
+        if self.x_posterior_covariance is None:
+            self.x_posterior_covariance = np.linalg.inv(
+                self.get_posterior_covariance_inverse()
+            )
+        return self.x_posterior_covariance
+
+    def get_gain(self):
+        if self.gain is None:
+            self.gain = (
+                self.get_posterior_covariance() @ self.K.T @ self.get_y_covariance_inv()
+            )
+        return self.gain
+
+    def get_averaging_kernel(self):
+        return self.get_gain() @ self.K
