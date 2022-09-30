@@ -138,6 +138,7 @@ class Regression:
         x_prior=None,
         x_covariance=None,
         y_covariance=None,
+        alpha=None,
     ):
         """
         Depending on the given parameters, three types of fits are possible:
@@ -164,12 +165,15 @@ class Regression:
             1-D or 2-D covariance of the prior estimate for the state.
         y_covariance : (m,) or (m, m) array_like or None
             1-D variance of the measurement vector.
+        alpha : float or None
+            Regularization strength.
         """
         self.y = np.array(y)
         self.K = np.array(K)
         self.x_prior = np.array(x_prior)
         self.x_covariance = np.array(x_covariance)
         self.y_covariance = np.array(y_covariance)
+        self.alpha = alpha
 
         self.x_covariance_inv = None
         self.y_covariance_inv = None
@@ -198,7 +202,10 @@ class Regression:
                 self.y, self.K, self.x_prior, self.x_covariance, self.y_covariance
             )
         # Store inversion parameters
-        self.y_reg, self.K_reg = self.model.get_reg_params()
+        if self.alpha is not None:
+            self.y_reg, self.K_reg = self.model.get_reg_params(self.alpha)
+        else:
+            self.y_reg, self.K_reg = self.model.get_reg_params()
 
     def fit(self, cond=None):
         """
@@ -309,6 +316,8 @@ class Regression:
                 )
             else:
                 self.x_covariance_inv = np.diag(1 / self.x_covariance)
+            if self.alpha is not None:
+                self.x_covariance_inv *= self.alpha
         return self.x_covariance_inv
 
     def get_y_covariance_inv(self):
@@ -319,7 +328,8 @@ class Regression:
     def get_posterior_covariance_inverse(self):
         if self.x_posterior_covariance_inv is None:
             self.x_posterior_covariance_inv = (
-                self.K.T @ self.get_y_covariance_inv() @ self.K + self.get_x_covariance_inv()
+                self.K.T @ self.get_y_covariance_inv() @ self.K
+                + self.get_x_covariance_inv()
             )
         return self.x_posterior_covariance_inv
 

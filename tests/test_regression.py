@@ -70,3 +70,40 @@ def test_regression():
         x_covariance_inv_sqrt @ x_covariance_inv_sqrt.T @ x_covariance,
         np.eye(n),
     )
+
+    # With alpha
+    alpha = 0.5
+
+    # Simple Least Squares
+    reg = Regression(y, K, alpha=alpha)
+    x_est, res, rank, s = reg.fit()
+    inv_params = reg.compute_l_curve()
+
+    # Bayesian diagonal covariance
+    reg = Regression(y, K, x_prior, np.diag(x_covariance), y_covariance, alpha=alpha)
+    x_est, res, rank, s = reg.fit()
+    inv_params = reg.compute_l_curve()
+    posterior_covariance = reg.get_posterior_covariance()
+    assert posterior_covariance.shape == (n, n)
+    gain = reg.get_gain()
+    assert gain.shape == (n, m)
+    averaging_kernel = reg.get_averaging_kernel()
+    assert averaging_kernel.shape == (n, n)
+
+    # Bayesian with full covariance
+    reg = Regression(y, K, x_prior, x_covariance, y_covariance, alpha=alpha)
+    x_est, res, rank, s = reg.fit()
+    inv_params = reg.compute_l_curve()
+    posterior_covariance = reg.get_posterior_covariance()
+    assert posterior_covariance.shape == (n, n)
+    gain = reg.get_gain()
+    assert gain.shape == (n, m)
+    averaging_kernel = reg.get_averaging_kernel()
+    assert averaging_kernel.shape == (n, n)
+
+    # Test Cholesky decomposition
+    x_covariance_inv_sqrt = reg.model.x_covariance_inv_sqrt
+    assert np.allclose(
+        x_covariance_inv_sqrt @ x_covariance_inv_sqrt.T @ x_covariance,
+        np.eye(n),
+    )
