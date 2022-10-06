@@ -349,3 +349,8 @@ class Regression:
 
     def get_averaging_kernel(self):
         return self.get_gain() @ self.K
+
+    def get_correlation(self):
+        std_inv = 1 / np.sqrt(np.diag(self.get_posterior_covariance()))
+        std_inv_matrix = np.tile(std_inv, [std_inv.shape[0], 1])
+        return std_inv_matrix * self.get_posterior_covariance() * std_inv_matrix.T

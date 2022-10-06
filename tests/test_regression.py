@@ -85,6 +85,9 @@ def test_regression():
     inv_params = reg.compute_l_curve()
     posterior_covariance = reg.get_posterior_covariance()
     assert posterior_covariance.shape == (n, n)
+    assert np.allclose(posterior_covariance, posterior_covariance.T)
+    correlation = reg.get_correlation()
+    assert np.allclose(np.diag(correlation), 1.)
     gain = reg.get_gain()
     assert gain.shape == (n, m)
     averaging_kernel = reg.get_averaging_kernel()
@@ -96,10 +99,14 @@ def test_regression():
     inv_params = reg.compute_l_curve()
     posterior_covariance = reg.get_posterior_covariance()
     assert posterior_covariance.shape == (n, n)
+    assert np.allclose(posterior_covariance, posterior_covariance.T)
+    correlation = reg.get_correlation()
+    assert np.allclose(np.diag(correlation), 1.)
     gain = reg.get_gain()
     assert gain.shape == (n, m)
     averaging_kernel = reg.get_averaging_kernel()
     assert averaging_kernel.shape == (n, n)
+
 
     # Test Cholesky decomposition
     x_covariance_inv_sqrt = reg.model.x_covariance_inv_sqrt
