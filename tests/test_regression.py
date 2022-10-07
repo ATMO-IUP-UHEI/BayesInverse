@@ -17,6 +17,7 @@ def test_regression():
 
     and the Cholesky decomposition.
     """
+    tol = 1e-5
     m = 10  # Measurement dimension
     n = 21  # State dimension
     rng = np.random.default_rng(0)
@@ -52,6 +53,11 @@ def test_regression():
     assert gain.shape == (n, m)
     averaging_kernel = reg.get_averaging_kernel()
     assert averaging_kernel.shape == (n, n)
+    dof_signal = reg.get_dof_signal()
+    dof_noise = reg.get_dof_noise()
+    assert (dof_noise + dof_signal) - n <= tol
+    information_gain = reg.get_information_gain()
+    assert information_gain.shape == tuple()
 
     # Bayesian with full covariance
     reg = Regression(y, K, x_prior, x_covariance, y_covariance)
@@ -63,6 +69,11 @@ def test_regression():
     assert gain.shape == (n, m)
     averaging_kernel = reg.get_averaging_kernel()
     assert averaging_kernel.shape == (n, n)
+    dof_signal = reg.get_dof_signal()
+    dof_noise = reg.get_dof_noise()
+    assert (dof_noise + dof_signal) - n <= tol
+    information_gain = reg.get_information_gain()
+    assert information_gain.shape == tuple()
 
     # Test Cholesky decomposition
     x_covariance_inv_sqrt = reg.model.x_covariance_inv_sqrt

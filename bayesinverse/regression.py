@@ -354,3 +354,13 @@ class Regression:
         std_inv = 1 / np.sqrt(np.diag(self.get_posterior_covariance()))
         std_inv_matrix = np.tile(std_inv, [std_inv.shape[0], 1])
         return std_inv_matrix * self.get_posterior_covariance() * std_inv_matrix.T
+
+    def get_dof_signal(self):
+        return np.trace(self.get_averaging_kernel())
+
+    def get_dof_noise(self):
+        return np.trace(self.get_posterior_covariance() @ self.get_x_covariance_inv())
+
+    def get_information_gain(self):
+        state_dim = self.x_prior.shape[0]
+        return - 0.5 * np.log(np.linalg.det(np.eye(state_dim) - self.get_averaging_kernel()))
