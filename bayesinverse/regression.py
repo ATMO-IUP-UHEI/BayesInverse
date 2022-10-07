@@ -361,6 +361,6 @@ class Regression:
     def get_dof_noise(self):
         return np.trace(self.get_posterior_covariance() @ self.get_x_covariance_inv())
 
-    def get_information_gain(self):
+    def get_information_content(self):
         state_dim = self.x_prior.shape[0]
         return - 0.5 * np.log(np.linalg.det(np.eye(state_dim) - self.get_averaging_kernel()))

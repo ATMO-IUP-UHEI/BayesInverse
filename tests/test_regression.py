@@ -56,8 +56,8 @@ def test_regression():
     dof_signal = reg.get_dof_signal()
     dof_noise = reg.get_dof_noise()
     assert (dof_noise + dof_signal) - n <= tol
-    information_gain = reg.get_information_gain()
-    assert information_gain.shape == tuple()
+    information_content = reg.get_information_content()
+    assert information_content.shape == tuple()
 
     # Bayesian with full covariance
     reg = Regression(y, K, x_prior, x_covariance, y_covariance)
@@ -72,8 +72,8 @@ def test_regression():
     dof_signal = reg.get_dof_signal()
     dof_noise = reg.get_dof_noise()
     assert (dof_noise + dof_signal) - n <= tol
-    information_gain = reg.get_information_gain()
-    assert information_gain.shape == tuple()
+    information_content = reg.get_information_content()
+    assert information_content.shape == tuple()
 
     # Test Cholesky decomposition
     x_covariance_inv_sqrt = reg.model.x_covariance_inv_sqrt
