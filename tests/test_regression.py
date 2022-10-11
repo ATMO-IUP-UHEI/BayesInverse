@@ -89,11 +89,13 @@ def test_regression():
     reg = Regression(y, K, alpha=alpha)
     x_est, res, rank, s = reg.fit()
     inv_params = reg.compute_l_curve()
+    reg.set_x_covariance(None)
 
     # Bayesian diagonal covariance
     reg = Regression(y, K, x_prior, np.diag(x_covariance), y_covariance, alpha=alpha)
     x_est, res, rank, s = reg.fit()
     inv_params = reg.compute_l_curve()
+    reg.set_x_covariance(np.diag(x_covariance))
     posterior_covariance = reg.get_posterior_covariance()
     assert posterior_covariance.shape == (n, n)
     assert np.allclose(posterior_covariance, posterior_covariance.T)
@@ -104,10 +106,12 @@ def test_regression():
     averaging_kernel = reg.get_averaging_kernel()
     assert averaging_kernel.shape == (n, n)
 
+
     # Bayesian with full covariance
     reg = Regression(y, K, x_prior, x_covariance, y_covariance, alpha=alpha)
     x_est, res, rank, s = reg.fit()
     inv_params = reg.compute_l_curve()
+    reg.set_x_covariance(x_covariance)
     posterior_covariance = reg.get_posterior_covariance()
     assert posterior_covariance.shape == (n, n)
     assert np.allclose(posterior_covariance, posterior_covariance.T)

@@ -207,6 +207,16 @@ class Regression:
         else:
             self.y_reg, self.K_reg = self.model.get_reg_params()
 
+    def set_x_covariance(self, x_covariance):
+        self.__init__(
+            y=self.y,
+            K=self.K,
+            x_prior=self.x_prior,
+            x_covariance=x_covariance,
+            y_covariance=self.y_covariance,
+            alpha=self.alpha
+        )
+
     def fit(self, cond=None):
         """
         Fit the given forward model depending on the given parameters during the init.
