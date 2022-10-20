@@ -163,7 +163,7 @@ class Regression:
             1-D vector of the prior estimate for the state.
         x_covariance : (n,) or (n, n) array_like or None
             1-D or 2-D covariance of the prior estimate for the state.
-        y_covariance : (m,) or (m, m) array_like or None
+        y_covariance : (m,) array_like or None
             1-D variance of the measurement vector.
         alpha : float or None
             Regularization strength.
