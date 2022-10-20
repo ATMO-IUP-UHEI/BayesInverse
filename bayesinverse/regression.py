@@ -11,10 +11,22 @@ class LeastSquares:
         self.y = np.array(y)
         self.K = np.array(K)
 
+        self.alpha = 0.0
+        self.y_reg = None
+        self.K_reg = None
+
+    def set_y(self, y):
+        self.y = np.array(y)
+        if not (self.y_reg is None and self.K_reg is None):
+            # Update regression params
+            self.y_reg[: len(self.y)] = self.y
+
     def get_reg_params(self, alpha=0.0):
-        reg_vector = np.sqrt(alpha) * np.ones(self.K.shape[1])
-        self.y_reg = np.concatenate((self.y, reg_vector))
-        self.K_reg = np.concatenate((self.K, np.diag(reg_vector)))
+        if (alpha != self.alpha) or (self.y_reg is None and self.K_reg is None):
+            reg_vector = np.sqrt(alpha) * np.ones(self.K.shape[1])
+            self.y_reg = np.concatenate((self.y, reg_vector))
+            self.K_reg = np.concatenate((self.K, np.diag(reg_vector)))
+            self.alpha = alpha
         return self.y_reg, self.K_reg
 
     def get_loss_terms(self, x):
@@ -38,19 +50,64 @@ class BayInv:
         self.x_covariance = np.array(x_covariance)
         self.y_covariance = np.array(y_covariance)
 
-    def get_reg_params(self, alpha=1.0):
-        self.y_reg = np.concatenate(
-            (
-                self.y / np.sqrt(self.y_covariance),
-                np.sqrt(alpha) * self.x_prior / np.sqrt(self.x_covariance),
+        self.alpha = 1.0
+        self.y_reg = None
+        self.K_reg = None
+
+    def set_y(self, y):
+        self.y = np.array(y)
+        if not (self.y_reg is None and self.K_reg is None):
+            # Update regression params
+            self.y_reg[: len(self.y)] = self.y / np.sqrt(self.y_covariance)
+            self.K_reg[: self.K.shape[0]] = (
+                np.power(np.sqrt(self.y_covariance), -1).reshape(-1, 1) * self.K
             )
-        )
-        self.K_reg = np.concatenate(
-            (
-                np.power(np.sqrt(self.y_covariance), -1).reshape(-1, 1) * self.K,
-                np.sqrt(alpha) * np.diag(np.power(np.sqrt(self.x_covariance), -1)),
-            ),
-        )
+
+    def set_x_covariance(self, x_covariance):
+        self.x_covariance = np.array(x_covariance)
+
+        # Update regression params
+        if not (self.y_reg is None and self.K_reg is None):
+            self.y_reg[len(self.y) :] = (
+                np.sqrt(self.alpha) * self.x_prior / np.sqrt(self.x_covariance)
+            )
+            self.K_reg[self.K.shape[0] :] = np.sqrt(self.alpha) * np.diag(
+                np.power(np.sqrt(self.x_covariance), -1)
+            )
+    
+    def set_y_covariance(self, y_covariance):
+        self.y_covariance = np.array(y_covariance)
+        if not (self.y_reg is None and self.K_reg is None):
+            # Update regression params
+            self.y_reg[: len(self.y)] = self.y / np.sqrt(self.y_covariance)
+            self.K_reg[: self.K.shape[0]] = (
+                np.power(np.sqrt(self.y_covariance), -1).reshape(-1, 1) * self.K
+            )
+
+    def get_reg_params(self, alpha=1.0):
+        if self.y_reg is None and self.K_reg is None:
+            # First computation
+            self.y_reg = np.concatenate(
+                (
+                    self.y / np.sqrt(self.y_covariance),
+                    np.sqrt(alpha) * self.x_prior / np.sqrt(self.x_covariance),
+                )
+            )
+            self.K_reg = np.concatenate(
+                (
+                    np.power(np.sqrt(self.y_covariance), -1).reshape(-1, 1) * self.K,
+                    np.sqrt(alpha) * np.diag(np.power(np.sqrt(self.x_covariance), -1)),
+                ),
+            )
+        elif alpha != self.alpha:
+            # Update alpha
+            self.y_reg[len(self.y) :] = (
+                np.sqrt(alpha) * self.x_prior / np.sqrt(self.x_covariance)
+            )
+            self.K_reg[self.K.shape[0] :] = np.sqrt(alpha) * np.diag(
+                np.power(np.sqrt(self.x_covariance), -1)
+            )
+            self.alpha = alpha
         return self.y_reg, self.K_reg
 
     def get_loss_terms(self, x):
@@ -80,19 +137,66 @@ class BayInvCov:
         l = cholesky(self.x_covariance)
         self.x_covariance_inv_sqrt = np.linalg.inv(l)
 
-    def get_reg_params(self, alpha=1.0):
-        self.y_reg = np.concatenate(
-            (
-                self.y / np.sqrt(self.y_covariance),
-                np.sqrt(alpha) * self.x_covariance_inv_sqrt @ self.x_prior,
+        self.alpha = 1.0
+        self.y_reg = None
+        self.K_reg = None
+
+    def set_y(self, y):
+        self.y = np.array(y)
+        if not (self.y_reg is None and self.K_reg is None):
+            # Update regression params
+            self.y_reg[: len(self.y)] = self.y / np.sqrt(self.y_covariance)
+            self.K_reg[: self.K.shape[0]] = (
+                np.power(np.sqrt(self.y_covariance), -1).reshape(-1, 1) * self.K
             )
-        )
-        self.K_reg = np.concatenate(
-            (
-                np.power(np.sqrt(self.y_covariance), -1).reshape(-1, 1) * self.K,
-                np.sqrt(alpha) * self.x_covariance_inv_sqrt,
-            ),
-        )
+
+    def set_x_covariance(self, x_covariance):
+        self.x_covariance = np.array(x_covariance)
+
+        # Inverse and square-root with Cholesky-Decomposition
+        l = cholesky(self.x_covariance)
+        self.x_covariance_inv_sqrt = np.linalg.inv(l)
+
+        # Update regression params
+        if not (self.y_reg is None and self.K_reg is None):
+            self.y_reg[len(self.y) :] = (
+                np.sqrt(self.alpha) * self.x_covariance_inv_sqrt @ self.x_prior
+            )
+            self.K_reg[self.K.shape[0] :] = (
+                np.sqrt(self.alpha) * self.x_covariance_inv_sqrt
+            )
+
+    def set_y_covariance(self, y_covariance):
+        self.y_covariance = np.array(y_covariance)
+        if not (self.y_reg is None and self.K_reg is None):
+            # Update regression params
+            self.y_reg[: len(self.y)] = self.y / np.sqrt(self.y_covariance)
+            self.K_reg[: self.K.shape[0]] = (
+                np.power(np.sqrt(self.y_covariance), -1).reshape(-1, 1) * self.K
+            )
+
+    def get_reg_params(self, alpha=1.0):
+        if self.y_reg is None and self.K_reg is None:
+            # First computation
+            self.y_reg = np.concatenate(
+                (
+                    self.y / np.sqrt(self.y_covariance),
+                    np.sqrt(alpha) * self.x_covariance_inv_sqrt @ self.x_prior,
+                )
+            )
+            self.K_reg = np.concatenate(
+                (
+                    np.power(np.sqrt(self.y_covariance), -1).reshape(-1, 1) * self.K,
+                    np.sqrt(alpha) * self.x_covariance_inv_sqrt,
+                ),
+            )
+        elif alpha != self.alpha:
+            # Update alpha
+            self.y_reg[len(self.y) :] = (
+                np.sqrt(alpha) * self.x_covariance_inv_sqrt @ self.x_prior
+            )
+            self.K_reg[self.K.shape[0] :] = np.sqrt(alpha) * self.x_covariance_inv_sqrt
+            self.alpha = alpha
         return self.y_reg, self.K_reg
 
     def get_loss_terms(self, x):
@@ -207,15 +311,14 @@ class Regression:
         else:
             self.y_reg, self.K_reg = self.model.get_reg_params()
 
+    def set_y(self, y):
+        self.model.set_y(y)
+
     def set_x_covariance(self, x_covariance):
-        self.__init__(
-            y=self.y,
-            K=self.K,
-            x_prior=self.x_prior,
-            x_covariance=x_covariance,
-            y_covariance=self.y_covariance,
-            alpha=self.alpha
-        )
+        self.model.set_x_covariance(x_covariance)
+
+    def set_y_covariance(self, y_covariance):
+        self.model.set_y_covariance(y_covariance)
 
     def fit(self, cond=None):
         """
@@ -373,4 +476,6 @@ class Regression:
 
     def get_information_content(self):
         state_dim = self.x_prior.shape[0]
-        return - 0.5 * np.log(np.linalg.det(np.eye(state_dim) - self.get_averaging_kernel()))
+        return -0.5 * np.log(
+            np.linalg.det(np.eye(state_dim) - self.get_averaging_kernel())
+        )

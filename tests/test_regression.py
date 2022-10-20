@@ -89,39 +89,46 @@ def test_regression():
     reg = Regression(y, K, alpha=alpha)
     x_est, res, rank, s = reg.fit()
     inv_params = reg.compute_l_curve()
-    reg.set_x_covariance(None)
+
+    reg.set_y(2 * y)
 
     # Bayesian diagonal covariance
     reg = Regression(y, K, x_prior, np.diag(x_covariance), y_covariance, alpha=alpha)
     x_est, res, rank, s = reg.fit()
     inv_params = reg.compute_l_curve()
+
+    reg.set_y(2 * y)
     reg.set_x_covariance(np.diag(x_covariance))
+    reg.set_y_covariance(y_covariance)
+
     posterior_covariance = reg.get_posterior_covariance()
     assert posterior_covariance.shape == (n, n)
     assert np.allclose(posterior_covariance, posterior_covariance.T)
     correlation = reg.get_correlation()
-    assert np.allclose(np.diag(correlation), 1.)
+    assert np.allclose(np.diag(correlation), 1.0)
     gain = reg.get_gain()
     assert gain.shape == (n, m)
     averaging_kernel = reg.get_averaging_kernel()
     assert averaging_kernel.shape == (n, n)
-
 
     # Bayesian with full covariance
     reg = Regression(y, K, x_prior, x_covariance, y_covariance, alpha=alpha)
     x_est, res, rank, s = reg.fit()
     inv_params = reg.compute_l_curve()
+    
+    reg.set_y(2 * y)
     reg.set_x_covariance(x_covariance)
+    reg.set_y_covariance(y_covariance)
+
     posterior_covariance = reg.get_posterior_covariance()
     assert posterior_covariance.shape == (n, n)
     assert np.allclose(posterior_covariance, posterior_covariance.T)
     correlation = reg.get_correlation()
-    assert np.allclose(np.diag(correlation), 1.)
+    assert np.allclose(np.diag(correlation), 1.0)
     gain = reg.get_gain()
     assert gain.shape == (n, m)
     averaging_kernel = reg.get_averaging_kernel()
     assert averaging_kernel.shape == (n, n)
-
 
     # Test Cholesky decomposition
     x_covariance_inv_sqrt = reg.model.x_covariance_inv_sqrt
