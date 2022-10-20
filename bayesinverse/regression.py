@@ -312,13 +312,30 @@ class Regression:
             self.y_reg, self.K_reg = self.model.get_reg_params()
 
     def set_y(self, y):
+        self.y = np.array(y)
         self.model.set_y(y)
 
     def set_x_covariance(self, x_covariance):
+        self.x_covariance = np.array(x_covariance)
         self.model.set_x_covariance(x_covariance)
+        # Reset precomputed values
+        self.x_covariance_inv = None
+        self.x_posterior_covariance_inv = None
+        self.x_posterior_covariance = None
+        self.x_posterior_correlation = None
+        self.gain = None
+        self.averaging_kernel = None
 
     def set_y_covariance(self, y_covariance):
+        self.y_covariance = np.array(y_covariance)
         self.model.set_y_covariance(y_covariance)
+        # Reset precomputed values
+        self.y_covariance_inv = None
+        self.x_posterior_covariance_inv = None
+        self.x_posterior_covariance = None
+        self.x_posterior_correlation = None
+        self.gain = None
+        self.averaging_kernel = None
 
     def fit(self, cond=None):
         """
