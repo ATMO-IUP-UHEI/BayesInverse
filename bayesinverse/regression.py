@@ -510,5 +510,5 @@ class Regression:
             x_variance = self.x_covariance
         else:
             x_variance = np.diag(self.x_covariance)
-        er = (1 - np.diag(self.get_posterior_covariance) / x_variance) * 100
+        er = (1 - np.diag(self.get_posterior_covariance()) / x_variance) * 100
         return er
