@@ -74,7 +74,7 @@ class BayInv:
             self.K_reg[self.K.shape[0] :] = np.sqrt(self.alpha) * np.diag(
                 np.power(np.sqrt(self.x_covariance), -1)
             )
-    
+
     def set_y_covariance(self, y_covariance):
         self.y_covariance = np.array(y_covariance)
         if not (self.y_reg is None and self.K_reg is None):
@@ -496,3 +496,19 @@ class Regression:
         return -0.5 * np.log(
             np.linalg.det(np.eye(state_dim) - self.get_averaging_kernel())
         )
+
+    def get_error_reduction(self):
+        """
+        Compute the error reduction from Wu et al., 2018.
+
+        Returns
+        -------
+        er : numpy array
+            Error reduction for all states in percent.
+        """
+        if len(self.x_covariance.shape) == 1: 
+            x_variance = self.x_covariance
+        else:
+            x_variance = np.diag(self.x_covariance)
+        er = (1 - np.diag(self.get_posterior_covariance) / x_variance) * 100
+        return er
