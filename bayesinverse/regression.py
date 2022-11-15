@@ -74,7 +74,7 @@ class BayInv:
             self.K_reg[self.K.shape[0] :] = np.sqrt(self.alpha) * np.diag(
                 np.power(np.sqrt(self.x_covariance), -1)
             )
-    
+
     def set_y_covariance(self, y_covariance):
         self.y_covariance = np.array(y_covariance)
         if not (self.y_reg is None and self.K_reg is None):
@@ -470,15 +470,36 @@ class Regression:
             )
         return self.x_posterior_covariance
 
+    # Testing different numerical implementation schemes for the inversion
+    def get_posterior_covariance_testing(self):
+        if self.x_posterior_covariance is None:
+            self.x_posterior_covariance = np.linalg.pinv(
+                self.get_posterior_covariance_inverse(),
+                # rcond=0.01,
+            )
+        return self.x_posterior_covariance
+
     def get_gain(self):
         if self.gain is None:
             self.gain = (
                 self.get_posterior_covariance() @ self.K.T @ self.get_y_covariance_inv()
             )
         return self.gain
+    # Testing different numerical implementation schemes for the inversion
+    def get_gain_testing(self):
+        if self.gain is None:
+            self.gain = (
+                self.get_posterior_covariance_testing()
+                @ self.K.T
+                @ self.get_y_covariance_inv()
+            )
+        return self.gain
 
     def get_averaging_kernel(self):
         return self.get_gain() @ self.K
+
+    def get_averaging_kernel_testing(self):
+        return self.get_gain_testing() @ self.K
 
     def get_correlation(self):
         std_inv = 1 / np.sqrt(np.diag(self.get_posterior_covariance()))
