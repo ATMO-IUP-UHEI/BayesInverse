@@ -536,40 +536,57 @@ class Regression:
         )
         return gain
 
-    def _calc_point(self, alpha:float) -> tuple[float, float]:
-        """Calculates points on L-curve given a regulatization parameter and the model"""    
+    def _calc_point(self, alpha):
+        """Calculates points on L-curve given a regulatization parameter and the model"""
         result = self.compute_l_curve([alpha])
-        return np.log10(result["loss_forward_model"][0]), np.log10(result["loss_regularization"][0])
+        return np.log10(result["loss_forward_model"][0]), np.log10(
+            result["loss_regularization"][0]
+        )
 
     @staticmethod
-    def _euclidean_dist(P1: tuple[float, float], P2: tuple[float, float]) -> float:
+    def _euclidean_dist(P1, P2):
         """Calculates euclidean distanceof two points given in tuples"""
         P1 = np.array(P1)
         P2 = np.array(P2)
-        return np.linalg.norm(P1-P2)**2
+        return np.linalg.norm(P1 - P2) ** 2
 
-    def _calc_curvature(self, Pj: tuple[float, float], Pk: tuple[float, float], Pl: tuple[float, float]) -> float:
+    def _calc_curvature(self, Pj, Pk, Pl):
         """Calculates menger curvature of circle defined by three points"""
-        return 2*(Pj[0] * Pk[1] + Pk[0] * Pl[1] + Pl[0] * Pj[1] - Pj[0] * Pl[1] - Pk[0] * Pj[1] - Pl[0] * Pk[1])/np.sqrt(self._euclidean_dist(Pj, Pk) * self._euclidean_dist(Pk, Pl) * self._euclidean_dist(Pl, Pj))
+        return (
+            2
+            * (
+                Pj[0] * Pk[1]
+                + Pk[0] * Pl[1]
+                + Pl[0] * Pj[1]
+                - Pj[0] * Pl[1]
+                - Pk[0] * Pj[1]
+                - Pl[0] * Pk[1]
+            )
+            / np.sqrt(
+                self._euclidean_dist(Pj, Pk)
+                * self._euclidean_dist(Pk, Pl)
+                * self._euclidean_dist(Pl, Pj)
+            )
+        )
 
     @staticmethod
-    def _get_alpha2(alpha1: float, alpha4: float) -> float:
-        """Calculates position of regularization weight 2 highest and lowest weight"""      
-        phi = (1 + np.sqrt(5))/2
-        
+    def _get_alpha2(alpha1, alpha4):
+        """Calculates position of regularization weight 2 highest and lowest weight"""
+        phi = (1 + np.sqrt(5)) / 2
+
         exp1 = np.log10(alpha1)
         exp4 = np.log10(alpha4)
         exp2 = (exp4 + phi * exp1) / (1 + phi)
         return 10**exp2
 
     @staticmethod
-    def _get_alpha3(alpha1: float, alpha2: float, alpha4: float) -> float:
-        """Calculates position of regularization weight 3 from the other weights values"""    
-        return 10**(np.log10(alpha1) + (np.log10(alpha4) - np.log10(alpha2)))
+    def _get_alpha3(alpha1, alpha2, alpha4):
+        """Calculates position of regularization weight 3 from the other weights values"""
+        return 10 ** (np.log10(alpha1) + (np.log10(alpha4) - np.log10(alpha2)))
 
-    def optimal_alpha(self, interval: tuple[float, float], threshold: float):
-        """Find optiomal value for weigthing factor in regression. Based on 
-        https://doi.org/10.1088/2633-1357/abad0d. 'alpha' is used as name for the factor 
+    def optimal_alpha(self, interval, threshold):
+        """Find optiomal value for weigthing factor in regression. Based on
+        https://doi.org/10.1088/2633-1357/abad0d. 'alpha' is used as name for the factor
         instead of lambda in the paper.
 
         Parameters
@@ -583,7 +600,7 @@ class Regression:
         -------
         flaot
             Guess for optimal value of the weighting factor
-        """        
+        """
         alpha1 = interval[0]
         alpha4 = interval[1]
         alpha2 = self._get_alpha2(alpha1, alpha4)
@@ -593,7 +610,7 @@ class Regression:
         p_list = []
         for l in alpha_list:
             p_list.append(self._calc_point(l))
-        
+
         while (alpha_list[3] - alpha_list[0]) / alpha_list[3] >= threshold:
             c2 = self._calc_curvature(*p_list[:3])
             c3 = self._calc_curvature(*p_list[1:])
@@ -625,6 +642,8 @@ class Regression:
                 p_list[0] = p_list[1]
                 alpha_list[1] = alpha_list[2]
                 p_list[1] = p_list[2]
-                alpha_list[2] = self._get_alpha3(alpha_list[0], alpha_list[1], alpha_list[3])
+                alpha_list[2] = self._get_alpha3(
+                    alpha_list[0], alpha_list[1], alpha_list[3]
+                )
                 p_list[2] = self._calc_point(alpha_list[2])
         return alpha_opt
