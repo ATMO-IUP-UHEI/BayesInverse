@@ -316,7 +316,9 @@ class Regression:
         return 10**(np.log10(alpha1) + (np.log10(alpha4) - np.log10(alpha2)))
 
     def optimal_alpha(self, interval: tuple[float, float], threshold: float):
-        """Find optiomal value for weigthing factor in regression. Based on https://doi.org/10.1088/2633-1357/abad0d. 'alpha' is used as name for the facotr instead of lambda in the paper
+        """Find optiomal value for weigthing factor in regression. Based on 
+        https://doi.org/10.1088/2633-1357/abad0d. 'alpha' is used as name for the factor 
+        instead of lambda in the paper.
 
         Parameters
         ----------
