@@ -11,13 +11,25 @@ class LeastSquares:
         self.y = np.array(y)
         self.K = np.array(K)
 
+        self.alpha = 0.0
+        self.y_reg = None
+        self.K_reg = None
+
+    def set_y(self, y):
+        self.y = np.array(y)
+        if not (self.y_reg is None and self.K_reg is None):
+            # Update regression params
+            self.y_reg[: len(self.y)] = self.y
+
     def get_reg_params(self, alpha=0.0):
-        reg_vector = np.sqrt(alpha) * np.ones(self.K.shape[1])
-        self.y_reg = np.concatenate((self.y, reg_vector))
-        self.K_reg = np.concatenate((self.K, np.diag(reg_vector)))
+        if (alpha != self.alpha) or (self.y_reg is None and self.K_reg is None):
+            reg_vector = np.sqrt(alpha) * np.ones(self.K.shape[1])
+            self.y_reg = np.concatenate((self.y, reg_vector))
+            self.K_reg = np.concatenate((self.K, np.diag(reg_vector)))
+            self.alpha = alpha
         return self.y_reg, self.K_reg
 
-    def get_loss_terms(self, x, alpha):
+    def get_loss_terms(self, x):
         loss_regularization = np.sum(x**2)
         loss_least_squares = np.sum((self.y - self.K @ x) ** 2)
         return loss_regularization, loss_least_squares
@@ -38,22 +50,67 @@ class BayInv:
         self.x_covariance = np.array(x_covariance)
         self.y_covariance = np.array(y_covariance)
 
-    def get_reg_params(self, alpha=1.0):
-        self.y_reg = np.concatenate(
-            (
-                self.y / np.sqrt(self.y_covariance),
-                np.sqrt(alpha) * self.x_prior / np.sqrt(self.x_covariance),
+        self.alpha = 1.0
+        self.y_reg = None
+        self.K_reg = None
+
+    def set_y(self, y):
+        self.y = np.array(y)
+        if not (self.y_reg is None and self.K_reg is None):
+            # Update regression params
+            self.y_reg[: len(self.y)] = self.y / np.sqrt(self.y_covariance)
+            self.K_reg[: self.K.shape[0]] = (
+                np.power(np.sqrt(self.y_covariance), -1).reshape(-1, 1) * self.K
             )
-        )
-        self.K_reg = np.concatenate(
-            (
-                np.power(np.sqrt(self.y_covariance), -1).reshape(-1, 1) * self.K,
-                np.sqrt(alpha) * np.diag(np.power(np.sqrt(self.x_covariance), -1)),
-            ),
-        )
+
+    def set_x_covariance(self, x_covariance):
+        self.x_covariance = np.array(x_covariance)
+
+        # Update regression params
+        if not (self.y_reg is None and self.K_reg is None):
+            self.y_reg[len(self.y) :] = (
+                np.sqrt(self.alpha) * self.x_prior / np.sqrt(self.x_covariance)
+            )
+            self.K_reg[self.K.shape[0] :] = np.sqrt(self.alpha) * np.diag(
+                np.power(np.sqrt(self.x_covariance), -1)
+            )
+
+    def set_y_covariance(self, y_covariance):
+        self.y_covariance = np.array(y_covariance)
+        if not (self.y_reg is None and self.K_reg is None):
+            # Update regression params
+            self.y_reg[: len(self.y)] = self.y / np.sqrt(self.y_covariance)
+            self.K_reg[: self.K.shape[0]] = (
+                np.power(np.sqrt(self.y_covariance), -1).reshape(-1, 1) * self.K
+            )
+
+    def get_reg_params(self, alpha=1.0):
+        if self.y_reg is None and self.K_reg is None:
+            # First computation
+            self.y_reg = np.concatenate(
+                (
+                    self.y / np.sqrt(self.y_covariance),
+                    np.sqrt(alpha) * self.x_prior / np.sqrt(self.x_covariance),
+                )
+            )
+            self.K_reg = np.concatenate(
+                (
+                    np.power(np.sqrt(self.y_covariance), -1).reshape(-1, 1) * self.K,
+                    np.sqrt(alpha) * np.diag(np.power(np.sqrt(self.x_covariance), -1)),
+                ),
+            )
+        elif alpha != self.alpha:
+            # Update alpha
+            self.y_reg[len(self.y) :] = (
+                np.sqrt(alpha) * self.x_prior / np.sqrt(self.x_covariance)
+            )
+            self.K_reg[self.K.shape[0] :] = np.sqrt(alpha) * np.diag(
+                np.power(np.sqrt(self.x_covariance), -1)
+            )
+            self.alpha = alpha
         return self.y_reg, self.K_reg
 
-    def get_loss_terms(self, x, alpha):
+    def get_loss_terms(self, x):
         loss_regularization = (
             (self.x_prior - x) @ np.diag(1 / self.x_covariance) @ (self.x_prior - x)
         )
@@ -80,22 +137,69 @@ class BayInvCov:
         l = cholesky(self.x_covariance)
         self.x_covariance_inv_sqrt = np.linalg.inv(l)
 
-    def get_reg_params(self, alpha=1.0):
-        self.y_reg = np.concatenate(
-            (
-                self.y / np.sqrt(self.y_covariance),
-                np.sqrt(alpha) * self.x_covariance_inv_sqrt @ self.x_prior,
+        self.alpha = 1.0
+        self.y_reg = None
+        self.K_reg = None
+
+    def set_y(self, y):
+        self.y = np.array(y)
+        if not (self.y_reg is None and self.K_reg is None):
+            # Update regression params
+            self.y_reg[: len(self.y)] = self.y / np.sqrt(self.y_covariance)
+            self.K_reg[: self.K.shape[0]] = (
+                np.power(np.sqrt(self.y_covariance), -1).reshape(-1, 1) * self.K
             )
-        )
-        self.K_reg = np.concatenate(
-            (
-                np.power(np.sqrt(self.y_covariance), -1).reshape(-1, 1) * self.K,
-                np.sqrt(alpha) * self.x_covariance_inv_sqrt,
-            ),
-        )
+
+    def set_x_covariance(self, x_covariance):
+        self.x_covariance = np.array(x_covariance)
+
+        # Inverse and square-root with Cholesky-Decomposition
+        l = cholesky(self.x_covariance)
+        self.x_covariance_inv_sqrt = np.linalg.inv(l)
+
+        # Update regression params
+        if not (self.y_reg is None and self.K_reg is None):
+            self.y_reg[len(self.y) :] = (
+                np.sqrt(self.alpha) * self.x_covariance_inv_sqrt @ self.x_prior
+            )
+            self.K_reg[self.K.shape[0] :] = (
+                np.sqrt(self.alpha) * self.x_covariance_inv_sqrt
+            )
+
+    def set_y_covariance(self, y_covariance):
+        self.y_covariance = np.array(y_covariance)
+        if not (self.y_reg is None and self.K_reg is None):
+            # Update regression params
+            self.y_reg[: len(self.y)] = self.y / np.sqrt(self.y_covariance)
+            self.K_reg[: self.K.shape[0]] = (
+                np.power(np.sqrt(self.y_covariance), -1).reshape(-1, 1) * self.K
+            )
+
+    def get_reg_params(self, alpha=1.0):
+        if self.y_reg is None and self.K_reg is None:
+            # First computation
+            self.y_reg = np.concatenate(
+                (
+                    self.y / np.sqrt(self.y_covariance),
+                    np.sqrt(alpha) * self.x_covariance_inv_sqrt @ self.x_prior,
+                )
+            )
+            self.K_reg = np.concatenate(
+                (
+                    np.power(np.sqrt(self.y_covariance), -1).reshape(-1, 1) * self.K,
+                    np.sqrt(alpha) * self.x_covariance_inv_sqrt,
+                ),
+            )
+        elif alpha != self.alpha:
+            # Update alpha
+            self.y_reg[len(self.y) :] = (
+                np.sqrt(alpha) * self.x_covariance_inv_sqrt @ self.x_prior
+            )
+            self.K_reg[self.K.shape[0] :] = np.sqrt(alpha) * self.x_covariance_inv_sqrt
+            self.alpha = alpha
         return self.y_reg, self.K_reg
 
-    def get_loss_terms(self, x, alpha):
+    def get_loss_terms(self, x):
         loss_regularization = (
             (self.x_prior - x)
             @ self.x_covariance_inv_sqrt
@@ -138,6 +242,7 @@ class Regression:
         x_prior=None,
         x_covariance=None,
         y_covariance=None,
+        alpha=None,
     ):
         """
         Depending on the given parameters, three types of fits are possible:
@@ -162,14 +267,25 @@ class Regression:
             1-D vector of the prior estimate for the state.
         x_covariance : (n,) or (n, n) array_like or None
             1-D or 2-D covariance of the prior estimate for the state.
-        y_covariance : (m,) or (m, m) array_like or None
+        y_covariance : (m,) array_like or None
             1-D variance of the measurement vector.
+        alpha : float or None
+            Regularization strength.
         """
         self.y = np.array(y)
         self.K = np.array(K)
         self.x_prior = np.array(x_prior)
         self.x_covariance = np.array(x_covariance)
         self.y_covariance = np.array(y_covariance)
+        self.alpha = alpha
+
+        self.x_covariance_inv = None
+        self.y_covariance_inv = None
+        self.x_posterior_covariance_inv = None
+        self.x_posterior_covariance = None
+        self.x_posterior_correlation = None
+        self.gain = None
+        self.averaging_kernel = None
 
         # Choose model
         # Standard Least-Squares
@@ -190,7 +306,36 @@ class Regression:
                 self.y, self.K, self.x_prior, self.x_covariance, self.y_covariance
             )
         # Store inversion parameters
-        self.y_reg, self.K_reg = self.model.get_reg_params()
+        if self.alpha is not None:
+            self.y_reg, self.K_reg = self.model.get_reg_params(self.alpha)
+        else:
+            self.y_reg, self.K_reg = self.model.get_reg_params()
+
+    def set_y(self, y):
+        self.y = np.array(y)
+        self.model.set_y(y)
+
+    def set_x_covariance(self, x_covariance):
+        self.x_covariance = np.array(x_covariance)
+        self.model.set_x_covariance(x_covariance)
+        # Reset precomputed values
+        self.x_covariance_inv = None
+        self.x_posterior_covariance_inv = None
+        self.x_posterior_covariance = None
+        self.x_posterior_correlation = None
+        self.gain = None
+        self.averaging_kernel = None
+
+    def set_y_covariance(self, y_covariance):
+        self.y_covariance = np.array(y_covariance)
+        self.model.set_y_covariance(y_covariance)
+        # Reset precomputed values
+        self.y_covariance_inv = None
+        self.x_posterior_covariance_inv = None
+        self.x_posterior_covariance = None
+        self.x_posterior_correlation = None
+        self.gain = None
+        self.averaging_kernel = None
 
     def fit(self, cond=None):
         """
@@ -259,6 +404,13 @@ class Regression:
         ...     inv_params["loss_forward_model"],
         ... )
 
+        To get the gain, averaging kernel, and posterior covariance matrix (only works
+        for Bayesian inversion):
+
+        >>> posterior_covariance = regression.get_posterior_covariance()
+        >>> gain = regression.get_gain()
+        >>> averaging_kernel = regression.get_averaging_kernel()
+
         """
         inversion_params = dict(
             alpha=alpha_list,
@@ -278,11 +430,111 @@ class Regression:
             inversion_params["rank"].append(rank)
             inversion_params["s"].append(s)
             loss_regularization, loss_forward_model = self.model.get_loss_terms(
-                x=self.x_est, alpha=alpha
+                x=self.x_est
             )
             inversion_params["loss_regularization"].append(loss_regularization)
             inversion_params["loss_forward_model"].append(loss_forward_model)
         return inversion_params
+
+    def get_x_covariance_inv(self):
+        if self.x_covariance_inv is None:
+            # Check if prior covariance with off-diagonal elements
+            if len(self.x_covariance.shape) == 2:
+                self.x_covariance_inv = (
+                    self.model.x_covariance_inv_sqrt.T
+                    @ self.model.x_covariance_inv_sqrt
+                )
+            else:
+                self.x_covariance_inv = np.diag(1 / self.x_covariance)
+            if self.alpha is not None:
+                self.x_covariance_inv *= self.alpha
+        return self.x_covariance_inv
+
+    def get_y_covariance_inv(self):
+        if self.y_covariance_inv is None:
+            self.y_covariance_inv = np.diag(1 / self.y_covariance)
+        return self.y_covariance_inv
+
+    def get_posterior_covariance_inverse(self):
+        if self.x_posterior_covariance_inv is None:
+            self.x_posterior_covariance_inv = (
+                self.K.T @ self.get_y_covariance_inv() @ self.K
+                + self.get_x_covariance_inv()
+            )
+        return self.x_posterior_covariance_inv
+
+    def get_posterior_covariance(self):
+        if self.x_posterior_covariance is None:
+            self.x_posterior_covariance = np.linalg.inv(
+                self.get_posterior_covariance_inverse()
+            )
+        return self.x_posterior_covariance
+
+    def get_gain(self):
+        if self.gain is None:
+            self.gain = (
+                self.get_posterior_covariance() @ self.K.T @ self.get_y_covariance_inv()
+            )
+        return self.gain
+
+    def get_averaging_kernel(self):
+        return self.get_gain() @ self.K
+
+    def get_correlation(self):
+        std_inv = 1 / np.sqrt(np.diag(self.get_posterior_covariance()))
+        std_inv_matrix = np.tile(std_inv, [std_inv.shape[0], 1])
+        return std_inv_matrix * self.get_posterior_covariance() * std_inv_matrix.T
+
+    def get_dof_signal(self):
+        return np.trace(self.get_averaging_kernel())
+
+    def get_dof_noise(self):
+        return np.trace(self.get_posterior_covariance() @ self.get_x_covariance_inv())
+
+    def get_information_content(self):
+        state_dim = self.x_prior.shape[0]
+        return -0.5 * np.log(
+            np.linalg.det(np.eye(state_dim) - self.get_averaging_kernel())
+        )
+
+    def get_error_reduction(self):
+        """
+        Compute the error reduction from Wu et al., 2018.
+
+        Returns
+        -------
+        er : numpy array
+            Error reduction for all states in percent.
+        """
+        if len(self.x_covariance.shape) == 1:
+            x_variance = self.x_covariance
+        else:
+            x_variance = np.diag(self.x_covariance)
+        er = (1 - np.diag(self.get_posterior_covariance()) / x_variance) * 100
+        return er
+
+    def get_relative_gain(self, x_truth, x_posterior=None):
+        """
+        Compute the gain of the inversion.
+
+        Parameters
+        ----------
+        x_truth : 1-d numpy array
+            The true states.
+        x_posterior : 1-d numpy array, optional
+            The posterior states, by default None
+
+        Returns
+        -------
+        gain : 1-d numpy array
+            Relative improvement of posterior to prior.
+        """
+        if x_posterior is None:
+            x_posterior = self.x_est
+        gain = 1 - np.linalg.norm(x_posterior - x_truth) / np.linalg.norm(
+            self.x_prior - x_truth
+        )
+        return gain
 
     def _calc_point(self, alpha:float) -> tuple[float, float]:
         """Calculates points on L-curve given a regulatization parameter and the model"""    
