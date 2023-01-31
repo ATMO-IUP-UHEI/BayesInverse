@@ -506,9 +506,32 @@ class Regression:
         er : numpy array
             Error reduction for all states in percent.
         """
-        if len(self.x_covariance.shape) == 1: 
+        if len(self.x_covariance.shape) == 1:
             x_variance = self.x_covariance
         else:
             x_variance = np.diag(self.x_covariance)
         er = (1 - np.diag(self.get_posterior_covariance()) / x_variance) * 100
         return er
+
+    def get_relative_gain(self, x_truth, x_posterior=None):
+        """
+        Compute the gain of the inversion.
+
+        Parameters
+        ----------
+        x_truth : 1-d numpy array
+            The true states.
+        x_posterior : 1-d numpy array, optional
+            The posterior states, by default None
+
+        Returns
+        -------
+        gain : 1-d numpy array
+            Relative improvement of posterior to prior.
+        """
+        if x_posterior is None:
+            x_posterior = self.x_est
+        gain = 1 - np.linalg.norm(x_posterior - x_truth) / np.linalg.norm(
+            self.x_prior - x_truth
+        )
+        return gain
