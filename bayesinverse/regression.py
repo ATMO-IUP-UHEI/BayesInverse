@@ -513,7 +513,7 @@ class Regression:
         er = (1 - np.diag(self.get_posterior_covariance()) / x_variance) * 100
         return er
 
-    def get_relative_gain(self, x_truth, x_posterior=None):
+    def get_relative_gain(self, x_truth, x_posterior=None, scaling=None):
         """
         Compute the gain of the inversion.
 
@@ -526,13 +526,13 @@ class Regression:
 
         Returns
         -------
-        gain : 1-d numpy array
+        gain : float
             Relative improvement of posterior to prior.
         """
         if x_posterior is None:
             x_posterior = self.x_est
-        gain = 1 - np.linalg.norm(x_posterior - x_truth) / np.linalg.norm(
-            self.x_prior - x_truth
+        gain = 1 - np.linalg.norm((x_posterior - x_truth) * scaling) / np.linalg.norm(
+            (self.x_prior - x_truth) * scaling
         )
         return gain
 
